@@ -1,8 +1,13 @@
 {
   "dependencies": {
-    "@nextui-org/react": "^2.3.6",
+    "@mantine/core": "^7.8.1",
+    "@mantine/hooks": "^7.8.1",
     "@types/bcrypt": "^5.0.2",
-    "bcrypt": "^5.1.1",
-    "framer-motion": "^11.1.7"
+    "bcrypt": "^5.1.1"
+  },
+  "devDependencies": {
+    "postcss": "^8.4.38",
+    "postcss-preset-mantine": "^1.15.0",
+    "postcss-simple-vars": "^7.0.1"
   }
 }
