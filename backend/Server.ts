@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import JWT from "jsonwebtoken";
 import pg from "pg";
 import axios, { isAxiosError } from "axios";
+import bcrypt from "bcrypt";
 
 dotenv.config();
 
@@ -13,10 +14,35 @@ const db = new pg.Client({
   connectionString: process.env.DB_URL,
 });
 
-db.connect().then(() => console.log("Connected to database!"));
+db.connect()
+  .then(() => console.log("Connected to database!"))
+  .catch((err) => {
+    console.log(err);
+  });
 
 app.get("/signup", async (req, res) => {
   try {
+    const user: { username: string; password: string } = req.body;
+
+    const checkUser = await db.query(
+      "SELECT * FROM users WHERE username = $1",
+      [user.username]
+    );
+
+    if (checkUser.rows.length > 0) {
+      return res.json("Username already registered!").status(401);
+    }
+
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+
+    const createdUser = await db.query(
+      "INSERT INTO users(username, password) VALUES($1, $2) RETURNING *",
+      [user.username, hashedPassword]
+    );
+
+    return res.json({
+      jwt: JWT.sign(createdUser.rows[0], process.env.JWT_SECRET as string),
+    });
   } catch (error) {
     console.error(error);
     return res.status(500);
@@ -25,6 +51,29 @@ app.get("/signup", async (req, res) => {
 
 app.get("/signin", async (req, res) => {
   try {
+    const user: { username: string; password: string } = req.body;
+
+    const checkUser = await db.query(
+      "SELECT * FROM users WHERE username = $1",
+      [user.username]
+    );
+
+    if (checkUser.rows.length === 0) {
+      return res.json("User not found!").status(404);
+    }
+
+    const isPassword = await bcrypt.compare(
+      user.password,
+      checkUser.rows[0].password
+    );
+
+    if (isPassword) {
+      return res.json({
+        jwt: JWT.sign(checkUser.rows[0], process.env.JWT_SECRET as string),
+      });
+    } else {
+      return res.json("User not found!").status(404);
+    }
   } catch (error) {
     console.error(error);
     return res.status(500);
